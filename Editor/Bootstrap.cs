@@ -14,7 +14,7 @@ namespace com.MiAO.Unity.MCP.BehaviorDesignerTools
     public static class BehaviorDesignerToolsBootstrap
     {
         // Package configuration
-        private const string PackageName = "com.miao.unity.mcp.behavior-designer";
+        private const string PackageName = "com.miao.unity.mcp.behavior-designer-tools";
         private const string DisplayName = "Behavior Designer Tools";
 
         /// <summary>
