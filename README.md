@@ -1,1 +1,1 @@
-# Unity-MCP-Tools-Behavior-Designer
+# Unity-MCP-Tools-Essential

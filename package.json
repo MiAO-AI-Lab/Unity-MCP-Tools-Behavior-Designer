@@ -1,0 +1,32 @@
+{
+    "name": "com.miao.unity.mcp.behavior-designer-tools",
+    "version": "1.0.0",
+    "displayName": "Unity MCP Behavior Designer Tools",
+    "description": "Behavior Designer Unity MCP tools including Behavior Designer, and basic utility operations.",
+    "unity": "2021.3",
+    "keywords": [
+        "mcp",
+        "model context protocol",
+        "behavior designer",
+        "tools",
+        "behavior"
+    ],
+    "author": {
+        "name": "MiAO",
+        "email": "ai@miao.company"
+    },
+    "license": "Apache-2.0",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/MiAO-AI-Lab/Unity-MCP-Tools-Behavior-Designer.git"
+    },
+    "contributors": [
+        {
+            "name": "MiAO",
+            "email": "ai@miao.company"
+        }
+    ],
+    "dependencies": {
+        "com.miao.unity.mcp": "1.0.1"
+    }
+}
