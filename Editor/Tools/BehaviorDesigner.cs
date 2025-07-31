@@ -141,8 +141,10 @@ namespace com.MiAO.Unity.MCP.BehaviorDesignerTools
             behaviorSource.Save(entryTask, rootTask, detachedTaskList);
 
             TaskSerializationData taskData = behaviorSource.TaskData;
-            taskData.JSONSerialization = CustomToJson(entryTask, rootTask, detachedTaskList);
-            EditorUtility.SetDirty(externalBehavior);
+
+            taskData.JSONSerialization = CustomToJson(entryTask, rootTask, detachedTaskList, behaviorSource.Variables);
+
+            EditorUtility.SetDirty(externalBehavior); 
 
             // Force save all assets
             AssetDatabase.SaveAssets();
@@ -153,7 +155,7 @@ namespace com.MiAO.Unity.MCP.BehaviorDesignerTools
             JSONDeserialization.Load(behaviorSource.TaskData, behaviorSource, true);
         }
 
-        private static string CustomToJson(BehaviorDesigner.Runtime.Tasks.Task entryTask, BehaviorDesigner.Runtime.Tasks.Task rootTask, List<BehaviorDesigner.Runtime.Tasks.Task> detachedTasks)
+        private static string CustomToJson(BehaviorDesigner.Runtime.Tasks.Task entryTask, BehaviorDesigner.Runtime.Tasks.Task rootTask, List<BehaviorDesigner.Runtime.Tasks.Task> detachedTasks, List<SharedVariable> variables)
         {
             var jsonData = new Dictionary<string, object>();
 
@@ -177,7 +179,22 @@ namespace com.MiAO.Unity.MCP.BehaviorDesignerTools
                 jsonData["DetachedTasks"] = detachedTasksList;
             }
 
+            if (variables != null && variables.Count > 0)
+            {
+                jsonData["Variables"] = SerializeVariables(variables);
+            }
+
             return MiniJSON.Serialize(jsonData);
+        }
+
+        private static List<object> SerializeVariables(List<SharedVariable> variables)
+        {
+            var variablesList = new List<object>();
+            foreach (var variable in variables)
+            {
+                variablesList.Add(SerializeSharedVariable(variable));
+            }
+            return variablesList;
         }
 
         private static Dictionary<string, object> SerializeNodeData(NodeData nodeData, BehaviorDesigner.Runtime.Tasks.Task task)
@@ -341,9 +358,9 @@ namespace com.MiAO.Unity.MCP.BehaviorDesignerTools
             var sharedVarData = new Dictionary<string, object>();
             sharedVarData["Type"] = sharedVar.GetType().FullName;
             sharedVarData["Name"] = sharedVar.Name;
-            sharedVarData["IsShared"] = sharedVar.IsShared;
-            sharedVarData["IsGlobal"] = sharedVar.IsGlobal;
-            sharedVarData["IsDynamic"] = sharedVar.IsDynamic;
+            // sharedVarData["IsShared"] = sharedVar.IsShared;
+            // sharedVarData["IsGlobal"] = sharedVar.IsGlobal;
+            // sharedVarData["IsDynamic"] = sharedVar.IsDynamic;
 
             if (!string.IsNullOrEmpty(sharedVar.Tooltip))
             {
