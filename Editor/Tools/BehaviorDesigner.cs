@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using BehaviorDesigner.Runtime;
+using com.IvanMurzak.ReflectorNet.Utils;
 // using OfficeOpenXml.FormulaParsing.Excel.Functions.Math;
 
 namespace com.MiAO.Unity.MCP.BehaviorDesignerTools
@@ -14,8 +15,8 @@ namespace com.MiAO.Unity.MCP.BehaviorDesignerTools
     [McpPluginToolType]
     public partial class Tool_BehaviorDesigner
     {
-        const float X_OFFSET = 200f;
-        const float Y_OFFSET = 20f;
+        const float X_OFFSET = 150f;
+        const float Y_OFFSET = 100f;
 
         public static class Error
         {
@@ -108,7 +109,15 @@ namespace com.MiAO.Unity.MCP.BehaviorDesignerTools
             {
                 try
                 {
-                    JSONDeserialization.Load(behaviorSource.TaskData, behaviorSource, true);
+                    if (behaviorSource.Owner == null)
+                    {
+                        // If owner is null, create a new one
+                        var owner = ScriptableObject.CreateInstance<ExternalBehaviorTree>();
+                        behaviorSource.Owner = owner;
+                    }
+
+                    behaviorSource.CheckForSerialization(true);
+
                 }
                 catch (Exception ex)
                 {
@@ -131,22 +140,13 @@ namespace com.MiAO.Unity.MCP.BehaviorDesignerTools
             // Save the modified BehaviorSource
             behaviorSource.Save(entryTask, rootTask, detachedTaskList);
 
-            // Check if re-serialization is needed
-            bool check = behaviorSource.CheckForSerialization(force: true);
+            TaskSerializationData taskData = behaviorSource.TaskData;
+            taskData.JSONSerialization = CustomToJson(entryTask, rootTask, detachedTaskList);
+            EditorUtility.SetDirty(externalBehavior);
 
-            if (check)
-            {
-                // Regenerate the JSONSerialization part in TaskData and save; cannot use the original JSONSerialization
-                TaskSerializationData taskData = behaviorSource.TaskData;
-                taskData.JSONSerialization = CustomToJson(entryTask, rootTask, detachedTaskList);
-
-                EditorUtility.SetDirty(externalBehavior);
-
-                // Debug.Log($"JSONSerialization: {taskData.JSONSerialization}");
-            }
             // Force save all assets
             AssetDatabase.SaveAssets();
-
+ 
             // Refresh the asset database
             AssetDatabase.Refresh();
 
@@ -469,7 +469,7 @@ namespace com.MiAO.Unity.MCP.BehaviorDesignerTools
             }
         }
 
-        private static List<BehaviorDesigner.Runtime.Tasks.Task> GetTaskChildren(BehaviorDesigner.Runtime.Tasks.Task task)
+        public static List<BehaviorDesigner.Runtime.Tasks.Task> GetTaskChildren(BehaviorDesigner.Runtime.Tasks.Task task)
         {
             var children = new List<BehaviorDesigner.Runtime.Tasks.Task>();
             if (task == null) return children;
@@ -489,7 +489,7 @@ namespace com.MiAO.Unity.MCP.BehaviorDesignerTools
             return children;
         }
 
-        private static BehaviorDesigner.Runtime.Tasks.Task FindTaskById(BehaviorSource behaviorSource, int taskId)
+        public static BehaviorDesigner.Runtime.Tasks.Task FindTaskById(BehaviorSource behaviorSource, int taskId)
         {
             // Search in entry task
             if (behaviorSource.EntryTask?.ID == taskId)
@@ -512,7 +512,7 @@ namespace com.MiAO.Unity.MCP.BehaviorDesignerTools
             return null;
         }
 
-        private static BehaviorDesigner.Runtime.Tasks.Task FindTaskByIdRecursive(BehaviorDesigner.Runtime.Tasks.Task task, int taskId)
+        public static BehaviorDesigner.Runtime.Tasks.Task FindTaskByIdRecursive(BehaviorDesigner.Runtime.Tasks.Task task, int taskId)
         {
             if (task == null) return null;
             if (task.ID == taskId) return task;
@@ -527,7 +527,7 @@ namespace com.MiAO.Unity.MCP.BehaviorDesignerTools
             return null;
         }
 
-        private static int GetNextAvailableTaskId(BehaviorSource behaviorSource)
+        public static int GetNextAvailableTaskId(BehaviorSource behaviorSource)
         {
             var usedIds = new HashSet<int>();
             CollectTaskIds(behaviorSource.EntryTask, usedIds);
@@ -549,7 +549,7 @@ namespace com.MiAO.Unity.MCP.BehaviorDesignerTools
             return nextId;
         }
 
-        private static void CollectTaskIds(BehaviorDesigner.Runtime.Tasks.Task task, HashSet<int> usedIds)
+        public static void CollectTaskIds(BehaviorDesigner.Runtime.Tasks.Task task, HashSet<int> usedIds)
         {
             if (task == null) return;
             usedIds.Add(task.ID);
@@ -738,7 +738,7 @@ namespace com.MiAO.Unity.MCP.BehaviorDesignerTools
             }
         }
 
-        private static bool CanTaskAcceptChildren(BehaviorDesigner.Runtime.Tasks.Task task)
+        public static bool CanTaskAcceptChildren(BehaviorDesigner.Runtime.Tasks.Task task)
         {
             if (task == null) return false;
 
@@ -792,5 +792,137 @@ namespace com.MiAO.Unity.MCP.BehaviorDesignerTools
         }
 
         #endregion
+
+        #region Common Helper Methods for Generate and Manage
+
+        /// <summary>
+        /// Common pattern for loading BehaviorSource with error handling
+        /// </summary>
+        /// <param name="assetPath">Path to the behavior asset</param>
+        /// <returns>Tuple of (behaviorSource, externalBehavior, errorMessage)</returns>
+        public static (BehaviorSource behaviorSource, ExternalBehavior externalBehavior, string errorMessage) LoadBehaviorSourceWithErrorHandling(string assetPath)
+        {
+            return MainThread.Instance.Run(() =>
+            {
+                var (source, behavior) = LoadBehaviorSourceFromAssetPath(assetPath, out string error);
+                return (source, behavior, error);
+            });
+        }
+
+        /// <summary>
+        /// Common pattern for saving BehaviorSource with error handling
+        /// </summary>
+        /// <param name="externalBehavior">The external behavior asset</param>
+        /// <param name="behaviorSource">The behavior source to save</param>
+        /// <param name="operationName">Name of the operation for error messages</param>
+        /// <returns>Error message if failed, empty string if successful</returns>
+        public static string SaveBehaviorSourceWithErrorHandling(ExternalBehavior externalBehavior, BehaviorSource behaviorSource, string operationName = "save changes")
+        {
+            return MainThread.Instance.Run(() =>
+            {
+                try
+                {
+                    DumpBehaviorSourceToAsset(externalBehavior, behaviorSource.EntryTask, behaviorSource.RootTask, behaviorSource.DetachedTasks);
+                    return string.Empty; // Success
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError(ex.Message + "\n=================\n" + ex.StackTrace);
+                    return Error.FailedToOperate(operationName, ex.Message);
+                    }
+                }
+            );
+        }
+
+        // Cache for BehaviorDesigner assemblies
+        private static Assembly[] _behaviorDesignerAssemblies;
+        
+        /// <summary>
+        /// Get BehaviorDesigner related assemblies
+        /// </summary>
+        private static Assembly[] GetBehaviorDesignerAssemblies()
+        {
+            if (_behaviorDesignerAssemblies == null)
+            {
+                _behaviorDesignerAssemblies = AppDomain.CurrentDomain.GetAssemblies()
+                    .Where(a => a.FullName.Contains("BehaviorDesigner") || 
+                               a.GetTypes().Any(t => t.Namespace?.Contains("BehaviorDesigner") == true))
+                    .ToArray();
+                // Debug.Log($"Found {_behaviorDesignerAssemblies.Length} BehaviorDesigner assemblies");
+            }
+            return _behaviorDesignerAssemblies;
+        }
+
+        /// <summary>
+        /// Common pattern for finding task types with comprehensive search
+        /// </summary>
+        /// <param name="taskTypeName">Name of the task type to find</param>
+        /// <returns>The found Type or null if not found</returns>
+        public static Type FindTaskType(string taskTypeName)
+        {
+            // Debug.Log($"FindTaskType called with: {taskTypeName}");
+
+            // First try exact match
+            var taskType = Type.GetType(taskTypeName);
+            if (taskType != null) return taskType;
+
+            // Try with BehaviorDesigner namespace and assembly qualified name
+            string fullTypeName = $"BehaviorDesigner.Runtime.Tasks.{taskTypeName}";
+            
+            // Try with assembly qualified name
+            var behaviorDesignerAssemblies = GetBehaviorDesignerAssemblies();
+            foreach (var assembly in behaviorDesignerAssemblies)
+            {
+                string assemblyQualifiedName = $"{fullTypeName}, {assembly.FullName}";
+                taskType = Type.GetType(assemblyQualifiedName);
+                if (taskType != null)
+                {
+                    return taskType;
+                }
+            }
+
+            return taskType;
+        }
+
+        /// <summary>
+        /// Common pattern for creating Entry task
+        /// </summary>
+        /// <returns>Created entry task or null if failed</returns>
+        public static BehaviorDesigner.Runtime.Tasks.Task CreateEntryTask()
+        {
+            var entryTaskType = FindTaskType("EntryTask"); 
+            if (entryTaskType == null) return null;
+
+            var entryTask = Activator.CreateInstance(entryTaskType) as BehaviorDesigner.Runtime.Tasks.Task;
+            if (entryTask == null) return null;
+
+            entryTask.ID = 0;
+            entryTask.FriendlyName = "Entry";
+            entryTask.NodeData = new NodeData();
+            entryTask.NodeData.Offset = new Vector2(0, -100);
+
+            return entryTask;
+        }
+
+        /// <summary>
+        /// Validates loaded BehaviorSource and returns appropriate error message
+        /// </summary>
+        /// <param name="behaviorSource">The behavior source to validate</param>
+        /// <param name="externalBehavior">The external behavior to validate</param>
+        /// <param name="errorMessage">Error message from loading</param>
+        /// <returns>Error message if validation failed, empty string if successful</returns>
+        public static string ValidateLoadedBehaviorSource(BehaviorSource behaviorSource, ExternalBehavior externalBehavior, string errorMessage)
+        {
+            if (!string.IsNullOrEmpty(errorMessage))
+                return Error.FailedToReadBehaviorSource(errorMessage);
+
+            if (behaviorSource == null || externalBehavior == null)
+                return Error.FailedToReadBehaviorSource("BehaviorSource or ExternalBehavior is null");
+
+            return string.Empty; // Success
+        }
+
+        #endregion
+
     }
 }
