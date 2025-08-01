@@ -7,6 +7,7 @@ using System.Linq;
 using System.Collections.Generic;
 using BehaviorDesigner.Runtime;
 using System.ComponentModel;
+using System.Text;
 using com.IvanMurzak.ReflectorNet.Utils;
 
 namespace com.MiAO.Unity.MCP.BehaviorDesignerTools
@@ -21,7 +22,7 @@ namespace com.MiAO.Unity.MCP.BehaviorDesignerTools
         [Description(@"Manage comprehensive BehaviorSource operations including:
 - createAsset: Create a new BehaviorSource asset file. Use 'assetPath' parameter to specify the asset path.
 - readAsset: Read BehaviorDesigner content from asset path and return detailed node hierarchy
-- addNode: Add a new node to the BehaviorSource with specified parent and elder-brother task IDs, automatically calculate node offset
+- addNode: Add a new node to the BehaviorSource with specified parent and elder-brother task IDs, automatically calculate node offset, and set node parameters
 - deleteNode: Delete a node by ID and recursively delete all child nodes
 - moveNode: Move a node to a new parent with automatic offset calculation, recursively move all child nodes
 - autoLayout: Auto layout the BehaviorSource, recursively layout all child nodes of the target task
@@ -42,6 +43,8 @@ namespace com.MiAO.Unity.MCP.BehaviorDesignerTools
             string? taskTypeName = null,
             [Description("For addNode: Friendly name for the new task")]
             string? friendlyName = null,
+            [Description("For addNode: Task parameters in JSON format. Example: {duration: 2.0, text: \"Hello World\"}")]
+            string? taskParameters = null,
             [Description("For read: Whether to include detailed task serialization information")]
             bool includeDetails = false,
             [Description("For listAvailableTaskTypes: Filter task types by namespace or category name. For example, 'BehaviorDesigner.Runtime.Tasks' or 'Composite'. If not provided, all task types will be listed.")]
@@ -52,7 +55,7 @@ namespace com.MiAO.Unity.MCP.BehaviorDesignerTools
             {
                 "createasset" => CreateBehaviorSource(assetPath),
                 "readasset" => ReadBehaviorSource(assetPath, includeDetails),
-                "addnode" => AddNode(assetPath, parentTaskId, elderBrotherTaskId, taskTypeName, friendlyName),
+                "addnode" => AddNode(assetPath, parentTaskId, elderBrotherTaskId, taskTypeName, friendlyName, taskParameters),
                 "deletenode" => DeleteNode(assetPath, taskId),
                 "movenode" => MoveNode(assetPath, taskId, parentTaskId, elderBrotherTaskId),
                 "autolayout" => AutoLayout(assetPath, taskId),
@@ -193,7 +196,7 @@ namespace com.MiAO.Unity.MCP.BehaviorDesignerTools
             }
         }
 
-        private static string AddNode(string assetPath, int? parentTaskId, int? elderBrotherTaskId, string? taskTypeName, string? friendlyName)
+        private static string AddNode(string assetPath, int? parentTaskId, int? elderBrotherTaskId, string? taskTypeName, string? friendlyName, string? jsonParameters)
         {
             // Load BehaviorSource with error handling
             var (behaviorSource, externalBehavior, errorMessage) = LoadBehaviorSourceWithErrorHandling(assetPath);
@@ -235,6 +238,19 @@ namespace com.MiAO.Unity.MCP.BehaviorDesignerTools
 
                 // Create NodeData
                 newTask.NodeData = new NodeData();
+
+                // Set task parameters if provided
+                if (!string.IsNullOrEmpty(jsonParameters))
+                {
+                    var tokenizedParameters = BehaviorTreeDSLParser.Tokenize(jsonParameters);
+                    Dictionary<string, object> parsedParameters = new Dictionary<string, object>();
+                    int index = 1;
+                    BehaviorTreeDSLParser.ParseParameter(tokenizedParameters, ref index, parsedParameters);
+                    StringBuilder sb = new StringBuilder();
+                    BehaviorTreeGenerator.SetTaskParameters(newTask, parsedParameters, sb);
+                    if (sb.Length > 0)
+                        return sb.ToString();
+                }
 
                 if (createAsRootTask)
                 {

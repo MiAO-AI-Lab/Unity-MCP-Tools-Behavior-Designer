@@ -169,7 +169,7 @@ Common Parameters:
             }
         }
 
-        private List<string> Tokenize(string input)
+        internal static List<string> Tokenize(string input)
         {
             var tokens = new List<string>();
             var regex = new Regex(@"""[^""]*""|[{}:,]|[^\s{}:,""]+");
@@ -243,12 +243,15 @@ Common Parameters:
             return index + 2 < tokens.Count && tokens[index + 1] == ":";
         }
 
-        private void ParseParameter(List<string> tokens, ref int index, Dictionary<string, object> parameters)
+        internal static void ParseParameter(List<string> tokens, ref int index, Dictionary<string, object> parameters)
         {
             if (index + 2 >= tokens.Count)
                 throw new Exception("Invalid parameter format");
 
             string paramName = tokens[index];
+            if (paramName.StartsWith("\"") && paramName.EndsWith("\""))
+                paramName = paramName.Substring(1, paramName.Length - 2);
+
             string colon = tokens[index + 1];
             string paramValue = tokens[index + 2];
 
@@ -262,7 +265,7 @@ Common Parameters:
             index += 3;
         }
 
-        private object ParseParameterValue(string valueStr)
+        private static object ParseParameterValue(string valueStr)
         {
             // Remove quotes if present
             if (valueStr.StartsWith("\"") && valueStr.EndsWith("\""))
@@ -386,7 +389,7 @@ Common Parameters:
         }
 
 
-        private void SetTaskParameters(BehaviorDesigner.Runtime.Tasks.Task task, Dictionary<string, object> parameters, StringBuilder sb)
+        public static void SetTaskParameters(BehaviorDesigner.Runtime.Tasks.Task task, Dictionary<string, object> parameters, StringBuilder sb)
         {
             var taskType = task.GetType();
             
@@ -404,7 +407,7 @@ Common Parameters:
             }
         }
 
-        private void SetTaskParameter(BehaviorDesigner.Runtime.Tasks.Task task, Type taskType, string paramName, object value)
+        private static void SetTaskParameter(BehaviorDesigner.Runtime.Tasks.Task task, Type taskType, string paramName, object value)
         {
             // Try to find field
             var field = taskType.GetField(paramName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
@@ -427,7 +430,7 @@ Common Parameters:
             throw new Exception($"Parameter '{paramName}' not found on task type '{taskType.Name}'");
         }
 
-        private object ConvertParameterValue(object value, Type targetType)
+        private static object ConvertParameterValue(object value, Type targetType)
         {
             if (value == null) return null;
 
@@ -479,7 +482,7 @@ Common Parameters:
             }
         }
 
-        private void SetTaskChildren(BehaviorDesigner.Runtime.Tasks.Task parentTask, List<BehaviorDesigner.Runtime.Tasks.Task> children)
+        private static void SetTaskChildren(BehaviorDesigner.Runtime.Tasks.Task parentTask, List<BehaviorDesigner.Runtime.Tasks.Task> children)
         {
             var fields = parentTask.GetType().GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
             foreach (var field in fields)
@@ -492,7 +495,7 @@ Common Parameters:
             }
         }
 
-        private bool CanTaskAcceptChildren(BehaviorDesigner.Runtime.Tasks.Task task)
+        private static bool CanTaskAcceptChildren(BehaviorDesigner.Runtime.Tasks.Task task)
         {
             // Use the existing method from the main class
             return Tool_BehaviorDesigner.CanTaskAcceptChildren(task);

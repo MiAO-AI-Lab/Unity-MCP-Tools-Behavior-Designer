@@ -907,28 +907,30 @@ namespace com.MiAO.Unity.MCP.BehaviorDesignerTools
         /// <returns>The found Type or null if not found</returns>
         public static Type FindTaskType(string taskTypeName)
         {
-            // Debug.Log($"FindTaskType called with: {taskTypeName}");
-
             // First try exact match
-            var taskType = Type.GetType(taskTypeName);
+            var taskType = FindTaskType(taskTypeName, GetBehaviorDesignerAssemblies());
             if (taskType != null) return taskType;
 
             // Try with BehaviorDesigner namespace and assembly qualified name
             string fullTypeName = $"BehaviorDesigner.Runtime.Tasks.{taskTypeName}";
-            
-            // Try with assembly qualified name
-            var behaviorDesignerAssemblies = GetBehaviorDesignerAssemblies();
+            taskType = FindTaskType(fullTypeName, GetBehaviorDesignerAssemblies());
+            if (taskType != null) return taskType;
+
+            return null;
+        }
+
+        public static Type FindTaskType(string taskTypeName, Assembly[] behaviorDesignerAssemblies)
+        {
             foreach (var assembly in behaviorDesignerAssemblies)
             {
-                string assemblyQualifiedName = $"{fullTypeName}, {assembly.FullName}";
-                taskType = Type.GetType(assemblyQualifiedName);
+                string assemblyQualifiedName = $"{taskTypeName}, {assembly.FullName}";
+                Type taskType = Type.GetType(assemblyQualifiedName);
                 if (taskType != null)
                 {
                     return taskType;
                 }
             }
-
-            return taskType;
+            return null;
         }
 
         /// <summary>
