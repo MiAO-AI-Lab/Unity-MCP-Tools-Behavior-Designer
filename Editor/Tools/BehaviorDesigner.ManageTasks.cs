@@ -1,6 +1,7 @@
 #pragma warning disable CS8632 // The annotation for nullable reference types should only be used in code within a '#nullable' annotations context.
 using com.MiAO.Unity.MCP.Common;
 using UnityEngine;
+using UnityEditor;
 using System;
 using System.Linq;
 using System.Collections.Generic;
@@ -15,17 +16,19 @@ namespace com.MiAO.Unity.MCP.BehaviorDesignerTools
         [McpPluginTool
         (
             "BehaviorDesigner_ManageBehaviorSource",
-            Title = "Manage BehaviorDesigner BehaviorSource - Read, Add, Delete, Move nodes"
+            Title = "Manage BehaviorDesigner BehaviorSource and Tasks - Create/Read assets; Add/Delete/Move nodes; Auto Layout; List Available Task Types"
         )]
         [Description(@"Manage comprehensive BehaviorSource operations including:
-- read: Read BehaviorDesigner content from asset path and return detailed node hierarchy
+- createAsset: Create a new BehaviorSource asset file. Use 'assetPath' parameter to specify the asset path.
+- readAsset: Read BehaviorDesigner content from asset path and return detailed node hierarchy
 - addNode: Add a new node to the BehaviorSource with specified parent and elder-brother task IDs, automatically calculate node offset
 - deleteNode: Delete a node by ID and recursively delete all child nodes
 - moveNode: Move a node to a new parent with automatic offset calculation, recursively move all child nodes
-- autoLayout: Auto layout the BehaviorSource, recursively layout all child nodes of the target task")]
+- autoLayout: Auto layout the BehaviorSource, recursively layout all child nodes of the target task
+- listAvailableTaskTypes: List all available task types in the current project")]
         public string ManageBehaviorSource
         (
-            [Description("Operation type: 'read', 'addNode', 'deleteNode', 'moveNode', 'autoLayout', 'listAvailableTaskTypes'")]
+            [Description("Operation type: 'createAsset','readAsset', 'addNode', 'deleteNode', 'moveNode', 'autoLayout', 'listAvailableTaskTypes'")]
             string operation,
             [Description("Asset path to the BehaviorDesigner ExternalBehavior file. Starts with 'Assets/'. Ends with '.asset'.")]
             string assetPath,
@@ -47,7 +50,8 @@ namespace com.MiAO.Unity.MCP.BehaviorDesignerTools
         {
             return operation.ToLower() switch
             {
-                "read" => ReadBehaviorSource(assetPath, includeDetails),
+                "createAsset" => CreateBehaviorSource(assetPath),
+                "readAsset" => ReadBehaviorSource(assetPath, includeDetails),
                 "addnode" => AddNode(assetPath, parentTaskId, elderBrotherTaskId, taskTypeName, friendlyName),
                 "deletenode" => DeleteNode(assetPath, taskId),
                 "movenode" => MoveNode(assetPath, taskId, parentTaskId, elderBrotherTaskId),
@@ -58,6 +62,75 @@ namespace com.MiAO.Unity.MCP.BehaviorDesignerTools
         }
 
         #region BehaviorSource Management Methods
+
+        public static string CreateBehaviorSource(string assetPath)
+        {
+            return MainThread.Instance.Run(() =>
+            {
+                try
+                {
+                    // Validate asset path
+                    if (string.IsNullOrEmpty(assetPath))
+                        return Error.AssetPathIsEmpty();
+
+                    if (!assetPath.StartsWith("Assets/"))
+                        return Error.InvalidAssetPath(assetPath, "Asset path must start with 'Assets/'");
+
+                    if (!assetPath.EndsWith(".asset"))
+                        return Error.InvalidAssetPath(assetPath, "Asset path must end with '.asset'");
+
+                    // Check if asset already exists
+                    if (AssetDatabase.LoadAssetAtPath<ExternalBehavior>(assetPath) != null)
+                        return Error.AssetAlreadyExists(assetPath);
+
+                    // Ensure directory exists
+                    var directory = System.IO.Path.GetDirectoryName(assetPath);
+                    if (!string.IsNullOrEmpty(directory) && !AssetDatabase.IsValidFolder(directory))
+                    {
+                        System.IO.Directory.CreateDirectory(directory);
+                        AssetDatabase.Refresh();
+                    }
+
+                    // Create new ExternalBehaviorTree instance
+                    var externalBehavior = ScriptableObject.CreateInstance<ExternalBehaviorTree>();
+                    
+                    // Set basic properties
+                    externalBehavior.name = System.IO.Path.GetFileNameWithoutExtension(assetPath);
+                    
+                    // Create asset in the project
+                    AssetDatabase.CreateAsset(externalBehavior, assetPath);
+                    
+                    // Initialize BehaviorSource
+                    var behaviorSource = externalBehavior.GetBehaviorSource();
+                    if (behaviorSource != null)
+                    {
+                        // Set the owner reference
+                        behaviorSource.Owner = externalBehavior;
+                        behaviorSource.TaskData.Version = "1.7.12";
+                        
+                        // Initialize with empty state
+                        behaviorSource.EntryTask = null;
+                        behaviorSource.RootTask = null;
+                        behaviorSource.DetachedTasks = new List<BehaviorDesigner.Runtime.Tasks.Task>();
+                        
+                        // Ensure proper serialization
+                        behaviorSource.CheckForSerialization(true);
+                    }
+                    
+                    // Save changes
+                    EditorUtility.SetDirty(externalBehavior);
+                    AssetDatabase.SaveAssets();
+                    AssetDatabase.Refresh();
+
+                    return $"[Success] Created ExternalBehaviorTree asset at '{assetPath}'. The BehaviorTree is empty and ready for nodes to be added.";
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"Failed to create BehaviorSource: {ex.Message}\n{ex.StackTrace}");
+                    return Error.FailedToOperate("create ExternalBehaviorTree asset", ex.Message);
+                }
+            });
+        }
 
         public static string ReadBehaviorSource(string assetPath, bool includeDetails)
         {

@@ -72,6 +72,35 @@ namespace com.MiAO.Unity.MCP.BehaviorDesignerTools
             public static string NoRootTaskFound()
                 => "[Error] No root task found in the behavior source.";
 
+            public static string AssetPathIsEmpty()
+                => "[Error] Asset path is empty. Please provide a valid asset path.";
+
+            public static string InvalidAssetPath(string assetPath, string reason)
+                => $"[Error] Invalid asset path '{assetPath}': {reason}";
+
+            public static string AssetAlreadyExists(string assetPath)
+                => $"[Error] Asset already exists at path '{assetPath}'. Please use a different path or delete the existing asset first.";
+
+            public static string VariableNameRequired(string operation)
+                => $"[Error] Variable name is required for {operation}.";
+
+            public static string VariableTypeRequired(string operation)
+                => $"[Error] Variable type is required for {operation}.";
+
+            public static string VariableValueRequired(string operation)
+                => $"[Error] Variable value is required for {operation}.";
+
+            public static string VariableAlreadyExists(string variableName)
+                => $"[Error] Variable '{variableName}' already exists in the BehaviorSource.";
+
+            public static string VariableNotFound(string variableName)
+                => $"[Error] Variable '{variableName}' not found in the BehaviorSource.";
+
+            public static string VariableTypeNotFound(string variableTypeName)
+                => $"[Error] Variable type '{variableTypeName}' not found. Use 'listAvailableVariableTypes' to see available types.";
+
+            public static string FailedToCreateVariableInstance(string variableTypeName)
+                => $"[Error] Failed to create instance of variable type '{variableTypeName}'.";
         }
 
         public static (BehaviorSource, ExternalBehavior) LoadBehaviorSourceFromAssetPath(string assetPath, out string errorMessage)
@@ -389,7 +418,7 @@ namespace com.MiAO.Unity.MCP.BehaviorDesignerTools
             return sharedVarData;
         }
 
-        private static object SerializeValue(object value)
+        internal static object SerializeValue(object value)
         {
             if (value == null) return null;
 

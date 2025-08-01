@@ -1,6 +1,6 @@
 {
     "name": "com.miao.unity.mcp.behavior-designer-tools",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "displayName": "Unity MCP Behavior Designer Tools",
     "description": "Behavior Designer Unity MCP tools including Behavior Designer, and basic utility operations.",
     "unity": "2021.3",

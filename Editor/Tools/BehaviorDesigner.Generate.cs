@@ -180,7 +180,7 @@ Common Parameters:
                 if (!string.IsNullOrEmpty(token))
                     tokens.Add(token);
             }
-            
+            Debug.Log($"Tokens: {string.Join(", ", tokens)}");
             return tokens;
         }
 
