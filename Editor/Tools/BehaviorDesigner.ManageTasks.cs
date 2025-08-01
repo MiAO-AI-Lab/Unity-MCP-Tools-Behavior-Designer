@@ -50,8 +50,8 @@ namespace com.MiAO.Unity.MCP.BehaviorDesignerTools
         {
             return operation.ToLower() switch
             {
-                "createAsset" => CreateBehaviorSource(assetPath),
-                "readAsset" => ReadBehaviorSource(assetPath, includeDetails),
+                "createasset" => CreateBehaviorSource(assetPath),
+                "readasset" => ReadBehaviorSource(assetPath, includeDetails),
                 "addnode" => AddNode(assetPath, parentTaskId, elderBrotherTaskId, taskTypeName, friendlyName),
                 "deletenode" => DeleteNode(assetPath, taskId),
                 "movenode" => MoveNode(assetPath, taskId, parentTaskId, elderBrotherTaskId),
@@ -106,7 +106,7 @@ namespace com.MiAO.Unity.MCP.BehaviorDesignerTools
                     {
                         // Set the owner reference
                         behaviorSource.Owner = externalBehavior;
-                        behaviorSource.TaskData.Version = "1.7.12";
+                        behaviorSource.TaskData.Version = TASK_DATA_VERSION;
                         
                         // Initialize with empty state
                         behaviorSource.EntryTask = null;

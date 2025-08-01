@@ -17,6 +17,7 @@ namespace com.MiAO.Unity.MCP.BehaviorDesignerTools
     {
         const float X_OFFSET = 150f;
         const float Y_OFFSET = 100f;
+        const string TASK_DATA_VERSION = "1.7.12";
 
         public static class Error
         {
