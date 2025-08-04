@@ -501,15 +501,38 @@ namespace com.MiAO.Unity.MCP.BehaviorDesignerTools
             string indent = new string(' ', depth * 2);
             sb.AppendLine($"{indent}├─ {GetTaskInfo(task)}");
 
-            if (includeDetails && task.NodeData != null)
+            if (includeDetails)
             {
-                sb.AppendLine($"{indent}   Offset: ({task.NodeData.Offset.x}, {task.NodeData.Offset.y})");
-                if (!string.IsNullOrEmpty(task.NodeData.Comment))
-                    sb.AppendLine($"{indent}   Comment: {task.NodeData.Comment}");
+                if (task.NodeData != null)
+                {
+                    sb.AppendLine($"{indent}   Offset: ({task.NodeData.Offset.x}, {task.NodeData.Offset.y})");
+                    if (!string.IsNullOrEmpty(task.NodeData.Comment))
+                        sb.AppendLine($"{indent}   Comment: {task.NodeData.Comment}");
+                }
+                if (task.Disabled)
+                {
+                    sb.AppendLine($"{indent}   Disabled: {task.Disabled}");
+                }
+                if (task.IsInstant)
+                {
+                    sb.AppendLine($"{indent}   IsInstant: {task.IsInstant}");
+                }
+                // Print parameters
+                var parameters = task.GetType().GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                foreach (var parameter in parameters)
+                {
+                    if (parameter.GetValue(task) != null && parameter.Name != "children")
+                    {
+                        sb.AppendLine($"{indent}   {parameter.Name}: {parameter.GetValue(task)}");
+                    }
+                }
             }
 
             // Print children if they exist
             var children = GetTaskChildren(task);
+            // Sort children by X offset (Sequence task executes children in the order of their X offset)
+            children.Sort((a, b) => a.NodeData.Offset.x.CompareTo(b.NodeData.Offset.x));
+
             foreach (var child in children)
             {
                 PrintTaskHierarchy(child, sb, depth + 1, includeDetails);
