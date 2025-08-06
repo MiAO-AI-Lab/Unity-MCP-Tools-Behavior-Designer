@@ -1,5 +1,5 @@
 #pragma warning disable CS8632 // The annotation for nullable reference types should only be used in code within a '#nullable' annotations context.
-using com.MiAO.Unity.MCP.Common;
+using com.MiAO.MCP.Common;
 using UnityEngine;
 using UnityEditor;
 using System.Reflection;
@@ -10,7 +10,7 @@ using BehaviorDesigner.Runtime;
 using com.IvanMurzak.ReflectorNet.Utils;
 // using OfficeOpenXml.FormulaParsing.Excel.Functions.Math;
 
-namespace com.MiAO.Unity.MCP.BehaviorDesignerTools
+namespace com.MiAO.MCP.BehaviorDesignerTools
 {
     [McpPluginToolType]
     public partial class Tool_BehaviorDesigner

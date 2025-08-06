@@ -1,10 +1,10 @@
 using System.Reflection;
 using UnityEngine;
 using UnityEditor;
-using com.MiAO.Unity.MCP.Bootstrap;
-using com.MiAO.Unity.MCP.Common;
+using com.MiAO.MCP.Bootstrap;
+using com.MiAO.MCP.Common;
 
-namespace com.MiAO.Unity.MCP.BehaviorDesignerTools
+namespace com.MiAO.MCP.BehaviorDesignerTools
 {
     /// <summary>
     /// Essential Tools Bootstrap - Simplified bootstrap using Universal Package Bootstrap Framework
